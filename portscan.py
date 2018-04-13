@@ -10,9 +10,12 @@ from queue import Queue
 def portscan(target, port):
     s = None
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)   # Create new socket for each port tested.
-        s.settimeout(0.5)                                       # Don't spend too long waiting for a connection.
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Reuse a local socket in TIME_WAIT state.
+        # Create new socket for each port tested.
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Don't spend too long waiting for a connection.
+        s.settimeout(0.5)
+        # Reuse a local socket in TIME_WAIT state.
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.connect((target, port))
         s.shutdown(socket.SHUT_RDWR)
         return True
@@ -25,32 +28,37 @@ def portscan(target, port):
 # Worker for multi-threaded port scan
 def worker(print_lock, q):
     while True:
-        (target, port) = q.get()              # Block until an item is available.
+        # Block until an item is available.
+        (target, port) = q.get()
         if target is None or port is None:
             break
         if portscan(target, port):
             with print_lock:
                 print("\tPort", port, "is open!")
-        q.task_done()               # If a join() is currently blocking, will resume when all items have been processed.
+        # If a join() is currently blocking, will resume when all
+        # items have been processed.
+        q.task_done()
 
 # Multi-threaded scan of a single computer for a range of ports.
 def scanports(target, start_port, end_port):
-    q = Queue()                             # Thread safe queue dependent on threading module.
+    # Thread safe queue dependent on threading module.
+    q = Queue()
     print_lock = threading.Lock()
 
     # Create and start the worker thread objects.
-    worker_threads = []                     # A list of all the Thread objects
-    for i in range(100):                    # Number of worker threads.
+    worker_threads = []                 # A list of all the Thread objects
+    for i in range(100):                # Number of worker threads.
         worker_thread = threading.Thread(target=worker, args=(print_lock, q))
-        worker_thread.daemon = True         # Will die if/when the main thread dies.
+        worker_thread.daemon = True     # Will die if/when main thread dies.
         worker_threads.append(worker_thread)
         worker_thread.start()
 
     print("Scanning <%s>..." % target)
     logging.debug("")
-    for port in range (start_port, end_port):       # Create the activity queue
+    for port in range (start_port, end_port):    # Create the activity queue
         q.put((target, port))
-    q.join()                                # Blocks until all items in the queue have been gotten and processed.
+    # Blocks until all items in the queue have been gotten and processed.
+    q.join()
 
     # Stop worker threads
     for i in range(len(worker_threads)):
@@ -59,9 +67,11 @@ def scanports(target, start_port, end_port):
         worker_thread.join()
     logging.debug("Finished.")
 
-# Multi-threaded scan of entire subnet which is passed in as '192.168.1.' for a range of ports.
+# Multi-threaded scan of entire subnet which is passed in as '192.168.1.'
+# for a range of ports.
 def subnet_scanports(subnet, start_port, end_port):
-    q = Queue()                             # Thread safe queue dependent on threading module.
+    # Thread safe queue dependent on threading module.
+    q = Queue()
     print_lock = threading.Lock()
 
     # Create and start the worker thread objects.
@@ -75,9 +85,10 @@ def subnet_scanports(subnet, start_port, end_port):
         target = subnet + str(x)
         print("Scanning <%s>..." % target)
         logging.debug("")
-        for port in range(start_port, end_port):    # Create the activity queue
+        for port in range(start_port, end_port):   # Create the activity queue
             q.put((target, port))
-        q.join()                            # Blocks until all items in the queue have been gotten and processed.
+        # Blocks until all items in the queue have been gotten and processed.
+        q.join()
 
     # Stop worker threads
     for i in range(len(worker_threads)):
@@ -87,7 +98,8 @@ def subnet_scanports(subnet, start_port, end_port):
     logging.debug("Finished.")
 
 # Uncomment for testing speed of scan
-# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# logging.basicConfig(level=logging.DEBUG, \
+#                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Examples of using scans
 # subnet_scanports('192.168.1.', 1, 65556)
